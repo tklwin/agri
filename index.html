@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+  <meta charset="UTF-8" />
+  <title>မြန်မာ့ စိုက်ပျိုးရေး အကြံဉာဏ်များ</title>
+  <style>
+    body {
+      font-family: 'Helvetica Neue', sans-serif;
+      margin: 0;
+      padding: 2rem;
+      background: #f9f9f9;
+    }
+    h1 {
+      text-align: center;
+      color: #1d3557;
+    }
+    .entry {
+      background: white;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .entry h2 {
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+      color: #2a9d8f;
+    }
+    .entry pre {
+      background: #f1f1f1;
+      padding: 0.5rem;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+  </style>
+</head>
+<body>
+  <h1>မြန်မာ့ စိုက်ပျိုးရေး အကြံဉာဏ်များ</h1>
+  <div id="content">ဖိုင်များကို တင်နေပါတယ်...</div>
+
+  <script>
+    const files = [
+      "data/ကော်စေးပိုးထောင်ချောက် အသုံးပြုပြီး ပိုးမွှားကင်းထောက်ခြင်းနှင့် အင်းဆက်ဖျက်ပိုးများကို ကာကွယ်ခြင်း.json",
+      "data/သိုလှောင်စဉ် ကျရောက်သော ပိုးများကို အပင်ထွက်ပစ္စည်းများဖြင့် ကာကွယ်ခြင်း.json",
+      "data/အင်းဆက်ပိုးမွှားများ ကျရောက်မှုကို ဟန့်တားနိုင်သည့် ကြက်သွန်ဖြူဆေးရည် ပြုလုပ်နည်း.json",
+      "data/ကြက်သွန်ဖြူနှင့် ကြက်သွန်နီတို့တွင် ကျရောက်တတ်သော ပိုးမွှားကာကွယ်နှိမ်နင်းခြင်း.json",
+      "data/ကြက်သွန်ဖြူနှင့် ကြက်သွန်နီတို့တွင် ကျရောက်တတ်သောရောဂါ ကာကွယ်နှိမ်နင်းခြင်း.json",
+      "data/စပါးခင်းတွင် ကျရောက်တတ်သော ဖျက်ပိုးများနှင့် ကာကွယ်နှိမ်နင်းနည်းများ.json",
+      "data/ပဲတီစိမ်း တွင် ကျရောက်တတ်သော ဖျက်ပိုးများ.json",
+      "data/ပြောင်းသီးနှံတွင် ဆိုးရွားစွာကျရောက်ဖျက်ဆီးတတ်သော ငမြောင်တောင်နှင့် ကာကွယ်နှိမ်နင်းနည်းများ.json",
+      "data/ဝါသီးနှံတွင် ကျရောက်တတ်သော ရောဂါများနှင့် ကာကွယ်နှိမ်နင်းနည်းများ.json",
+      "data/ကွမ်းတွင် ကျရောက်တတ်သော ပိုးများ.json",
+      "data/ခရမ်းချဉ်တွင် ကျရောက်တတ်သော ရောဂါများ.json",
+      "data/ချင်းသီးနှံတွင် ကျရောက်တတ်သော ရောဂါများ.json",
+      "data/ငရုပ်တွင် ကျရောက်တတ်သော ရောဂါများ.json",
+      "data/ပေါင်းသတ်ဆေးကို သီးနှံရာသီဆက်တိုက်သုံးစွဲခြင်း၏ ဆိုးကျိုးများ.json",
+      "data/ပဲစင်းငုံတွင် ကျရောက်တတ်သော ပိုးမွှားများ.json",
+      "data/ပဲစင်းငုံတွင် ကျရောက်တတ်သော ရောဂါများ.json",
+      "data/ပဲတီစိမ်းတွင် ကျရောက်တတ်သော ရောဂါများ.json",
+      "data/မြေပဲတွင် ကျရောက်တတ်သော ရောဂါများ.json",
+      "data/မြေပဲသိုလှောင်စဉ်ကျသော ဖျက်ပိုးများနှင့် ကာကွယ်နှိမ်နင်းနည်းများ.json",
+      "data/မြေပဲသီးနှံ လှေးပိုးနှင့် ပျပိုး.json",
+      "data/ဝါသီးနှံတွင် ကျရောက်တတ်သော ပိုးမွှားများ.json",
+      "data/ကွမ်းတွင် ကျရောက်တတ်သောရောဂါများ.json",
+      "data/ငရုပ်တွင်ကျရောက်တတ်သော ပိုးမွှားများ.json",
+      "data/စပါးစိုက် မြေဆီလွှာပြဿနာများ.json",
+      "data/ဓာတုပိုးသတ်ဆေးစနစ်တကျ သုံးစွဲနည်းများ.json",
+      "data/နှမ်းတွင်ကျရောက်သော ရောဂါများ.json",
+      "data/နှမ်းသီးနှံတွင်အဓိကကျရောက်သော ပိုးမွှားများ.json",
+      "data/ပိုးနှင့်ရောဂါခွဲခြားပုံနှင့် အပင်ရောဂါအမျိုးမျိုး.json",
+      "data/မြေပဲရွက်လိပ်ရွက်ကပ်ပိုးနှင့် ငမြောင်တောင်.json",
+      "data/သတိပြုကိုင်တွယ်သုံးစွဲသင့်သည့် ဓာတုဆေးအန္တရာယ်.json",
+      "data/သဘာဝပိုးကာကွယ်ဆေး ပြုလုပ်နည်းများ.json",
+      "data/သရက် ပိုးမွှားများ.json",
+      "data/သရက် ရောဂါများ.json",
+      "data/ပိုးမွှားရောဂါကာကွယ်ရန် အီးအမ်(၅).json",
+      "data/ကိုယ်တိုင်အီးအမ်မွေးမြူနည်း.json",
+      "data/ကြက်သွန်ဂျိုလိမ်ရောဂါ.json",
+      "data/ဂေါ်ဖီထုပ်အနက်ပုပ်ရောဂါ.json",
+      "data/ပိုးစေးနဲ.json",
+      "data/ဖိုးလမင်းကျိုင်း.json",
+      "data/လှေးပိုး.json",
+      "data/သဘာဝပိုးသတ်ဆေး.json",
+      "data/အာဟာရချို့တဲ့မှုလက္ခဏာများ.json",
+      "data/Aflatoxin မှိုအဆိပ်ကြောင့် ဘယ်လိုအန္တရာယ်တွေ ဖြစ်စေနိုင်လဲ.json"
+    ];
+
+    const container = document.getElementById("content");
+    container.innerHTML = "";
+
+    files.forEach(async (file) => {
+      try {
+        const response = await fetch(file);
+        const json = await response.json();
+
+        const div = document.createElement("div");
+        div.className = "entry";
+        const filename = decodeURIComponent(file.split("/").pop());
+
+        div.innerHTML = `
+          <h2>${filename}</h2>
+          <pre>${JSON.stringify(json, null, 2)}</pre>
+        `;
+
+        container.appendChild(div);
+      } catch (err) {
+        console.error("Error loading", file, err);
+      }
+    });
+  </script>
+</body>
+</html>
