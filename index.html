@@ -6,69 +6,168 @@
   <title>Myanmar Agro-Advisories</title>
   <style>
     body {
-      font-family: sans-serif;
-      background: #f9f9f9;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f0f2f5;
       padding: 20px;
+      color: #333;
+    }
+    h1 {
+        color: #1a73e8; /* Google Blue */
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    #search-input {
+        width: calc(100% - 22px); /* Account for padding */
+        padding: 10px;
+        margin-bottom: 20px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 1em;
     }
     .card {
       background: #fff;
       margin-bottom: 15px;
-      padding: 15px;
+      padding: 15px 20px;
       border-radius: 8px;
-      box-shadow: 0 0 6px rgba(0,0,0,0.1);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+      transition: all 0.3s cubic-bezier(.25,.8,.25,1);
+    }
+    .card:hover {
+        box-shadow: 0 5px 10px rgba(0,0,0,0.20), 0 3px 3px rgba(0,0,0,0.15);
     }
     summary {
-      font-size: 1.1em;
-      font-weight: bold;
+      font-size: 1.2em;
+      font-weight: 600;
       cursor: pointer;
+      color: #1a73e8;
+    }
+    details[open] summary {
+        margin-bottom: 10px;
     }
     ul {
-      margin: 10px 0;
-      padding-left: 20px;
+      margin: 0;
+      padding-left: 25px;
+      list-style: disc;
+      line-height: 1.6;
+    }
+    li {
+        margin-bottom: 5px;
+    }
+    .no-results {
+        text-align: center;
+        color: #777;
+        font-style: italic;
+        margin-top: 20px;
     }
   </style>
 </head>
 <body>
   <h1>Myanmar Agricultural Pest & Disease Advisories</h1>
+  <input type="text" id="search-input" placeholder="Search articles by title or content...">
   <div id="container">Loading articles...</div>
 
   <script>
     const container = document.getElementById("container");
+    const searchInput = document.getElementById("search-input");
+    let allArticlesData = []; // Store all loaded article data
 
     async function loadArticle(index) {
-      const response = await fetch(`data/article${index}.json`);
-      const data = await response.json();
-      return data;
+      try {
+        const response = await fetch(`data/article${index}.json`);
+        if (!response.ok) {
+            console.warn(`Failed to load article${index}.json: ${response.statusText}`);
+            return null; // Indicate failure
+        }
+        const data = await response.json();
+        // Add the index to the data for reference if needed later
+        data.id = index;
+        return data;
+      } catch (err) {
+          console.error(`Error fetching or parsing article${index}.json`, err);
+          return null; // Indicate failure
+      }
+    }
+
+    function renderArticles(articlesToRender) {
+        container.innerHTML = ""; // Clear previous content
+        if (articlesToRender.length === 0) {
+            container.innerHTML = '<p class="no-results">No articles match your search.</p>';
+            return;
+        }
+
+        articlesToRender.forEach(data => {
+            if (!data) return; // Skip if data is null (failed load)
+
+            const card = document.createElement("div");
+            card.className = "card";
+
+            // Use a more robust way to get title and content
+            const title = data.entries && data.entries[0] && data.entries[0].title ? data.entries[0].title : (data.original_title || `Article ${data.id}`);
+            let bullets = [];
+            if (data.entries && Array.isArray(data.entries)) {
+                data.entries.forEach(entry => {
+                    if (entry.content && Array.isArray(entry.content)) {
+                        bullets = bullets.concat(entry.content);
+                    }
+                });
+            }
+
+            card.innerHTML = `
+                <details>
+                <summary>${title}</summary>
+                <ul>
+                    ${bullets.map(item => `<li>${item}</li>`).join("")}
+                </ul>
+                </details>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function filterArticles() {
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        if (!searchTerm) {
+            renderArticles(allArticlesData); // Show all if search is empty
+            return;
+        }
+
+        const filteredArticles = allArticlesData.filter(data => {
+            if (!data) return false;
+
+            const title = data.entries && data.entries[0] && data.entries[0].title ? data.entries[0].title.toLowerCase() : (data.original_title || `Article ${data.id}`).toLowerCase();
+            let contentString = "";
+             if (data.entries && Array.isArray(data.entries)) {
+                data.entries.forEach(entry => {
+                    if (entry.content && Array.isArray(entry.content)) {
+                        contentString += entry.content.join(" ").toLowerCase();
+                    }
+                });
+            }
+
+            return title.includes(searchTerm) || contentString.includes(searchTerm);
+        });
+
+        renderArticles(filteredArticles);
     }
 
     async function loadAllArticles() {
-      const articleCount = 43;
-      container.innerHTML = "";
+      const articleCount = 43; // Assuming 43 articles based on previous context
+      container.innerHTML = "Loading articles...";
+      allArticlesData = []; // Reset data
+      const promises = [];
 
       for (let i = 1; i <= articleCount; i++) {
-        try {
-          const data = await loadArticle(i);
-
-          const card = document.createElement("div");
-          card.className = "card";
-
-          const title = data.original_title || `Article ${i}`;
-          const bullets = Array.isArray(data.content) ? data.content : [];
-
-          card.innerHTML = `
-            <details>
-              <summary>${title}</summary>
-              <ul>
-                ${bullets.map(item => `<li>${item}</li>`).join("")}
-              </ul>
-            </details>
-          `;
-
-          container.appendChild(card);
-        } catch (err) {
-          console.warn(`Error loading article${i}.json`, err);
-        }
+        promises.push(loadArticle(i));
       }
+
+      // Wait for all fetch requests to complete
+      const results = await Promise.all(promises);
+      allArticlesData = results.filter(data => data !== null); // Filter out failed loads
+
+      renderArticles(allArticlesData); // Initial render of all articles
+
+      // Add event listener for search input after data is loaded
+      searchInput.addEventListener('input', filterArticles);
     }
 
     loadAllArticles();
