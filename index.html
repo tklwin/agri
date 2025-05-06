@@ -7,14 +7,23 @@
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: #f0f2f5;
+      /* background: #f0f2f5; */ /* Old background */
+      background-color: #f5f5dc; /* Beige/earthy background */
+      background-image: url('placeholder-for-agriculture-background.jpg'); /* Add a relevant background image URL here */
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed; /* Optional: keeps background fixed during scroll */
       padding: 20px;
       color: #333;
     }
     h1 {
-        color: #1a73e8; /* Google Blue */
+        /* color: #1a73e8; */ /* Old Google Blue */
+        color: #228B22; /* Forest Green */
         text-align: center;
         margin-bottom: 30px;
+        background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent white background for readability */
+        padding: 10px 0;
+        border-radius: 5px;
     }
     #search-input {
         width: calc(100% - 22px); /* Account for padding */
@@ -39,7 +48,8 @@
       font-size: 1.2em;
       font-weight: 600;
       cursor: pointer;
-      color: #1a73e8;
+      /* color: #1a73e8; */ /* Old Google Blue */
+      color: #556B2F; /* Dark Olive Green */
     }
     details[open] summary {
         margin-bottom: 10px;
@@ -82,18 +92,25 @@
 </head>
 <body>
   <h1>Myanmar Agricultural Pest & Disease Advisories</h1>
+  <!-- Filter dropdowns removed -->
   <div style="position: relative;">
     <input type="text" id="search-input" placeholder="Search articles by title or content..." autocomplete="off">
     <div id="suggestions-list"></div>
   </div>
+  <div id="article-counts" style="margin: 10px 0; font-weight: bold;"></div>
+  <div id="overview-counts" style="margin: 10px 0; font-size: 0.9em; color: #555;"></div> <!-- Added for overview counts -->
   <div id="container">Loading articles...</div>
 
   <script>
     const container = document.getElementById("container");
     const searchInput = document.getElementById("search-input");
     const suggestionsList = document.getElementById("suggestions-list");
+    // const cropFilter = document.getElementById("crop-filter"); // Removed
+    // const categoryFilter = document.getElementById("category-filter"); // Removed
     let allArticlesData = []; // Store all loaded article data
     let debounceTimer;
+    let currentCropFilter = ''; // State for current crop filter
+    let currentCategoryFilter = ''; // State for current category filter
 
     async function loadArticle(index) {
       try {
@@ -125,17 +142,32 @@
             const card = document.createElement("div");
             card.className = "card";
 
-            // Use a more robust way to get title and content
-            const mainTitle = data.crop ? `${data.crop} - ${data.category}` : `Article ${data.id}`; // Use crop/category or ID as main title
+            // Extract tags
+            const tagsHtml = `
+                <div style="margin-bottom: 10px; font-size: 0.9em; color: #555;">
+                    <span style="background-color: #e0e0e0; padding: 2px 6px; border-radius: 4px; margin-right: 5px;">Crop: ${data.crop || 'N/A'}</span>
+                    <span style="background-color: #e0e0e0; padding: 2px 6px; border-radius: 4px; margin-right: 5px;">Category: ${data.category || 'N/A'}</span>
+                    <span style="background-color: #e0e0e0; padding: 2px 6px; border-radius: 4px;">Source: ${data.source || 'N/A'}</span>
+                </div>
+            `;
+
+            // Use source (without .docx) as the main title, fallback to crop or ID
+            let mainTitle = `Article ${data.id}`; // Default title
+            if (data.source) {
+                mainTitle = data.source.replace(/\.docx$/i, ''); // Remove .docx extension, case-insensitive
+            } else if (data.crop) {
+                mainTitle = `${data.crop} Information`;
+            }
+            // const mainTitle = data.crop ? `${data.crop} Information` : `Article ${data.id}`;
             let contentHtml = '';
 
             if (data.entries && Array.isArray(data.entries)) {
                 data.entries.forEach(entry => {
-                    // Add entry title if it exists
+                    // Add entry title as a heading
                     if (entry.title) {
-                        contentHtml += `<h3>${entry.title}</h3>`;
+                        contentHtml += `<h4 style="margin-top: 15px; margin-bottom: 5px; color: #333;">${entry.title}</h4>`;
                     }
-                    // Add entry content bullets
+                    // Add entry content as a bulleted list
                     if (entry.content && Array.isArray(entry.content)) {
                         contentHtml += '<ul>';
                         entry.content.forEach(item => {
@@ -149,6 +181,7 @@
             card.innerHTML = `
                 <details>
                 <summary>${mainTitle}</summary>
+                ${tagsHtml}
                 <div>
                     ${contentHtml}
                 </div>
@@ -200,27 +233,44 @@
     }
 
     function filterArticles() {
-        // suggestionsList.innerHTML = ''; // Clear suggestions when performing full search
-        // suggestionsList.style.display = 'none';
         const searchTerm = searchInput.value.toLowerCase().trim();
-
-        // If search term is empty after clearing suggestions or initially, show all
-        if (!searchTerm) {
-            renderArticles(allArticlesData);
-            return;
-        }
+        // Use state variables for filters instead of dropdown values
+        const selectedCrop = currentCropFilter;
+        const selectedCategory = currentCategoryFilter;
 
         const filteredArticles = allArticlesData.filter(data => {
-            if (!data || !data.entries || !Array.isArray(data.entries)) return false;
+            if (!data) return false;
 
-            // Check if the search term matches any title or content within the article's entries
-            return data.entries.some(entry => {
-                const titleMatch = entry.title && entry.title.toLowerCase().includes(searchTerm);
-                const contentMatch = entry.content && Array.isArray(entry.content) &&
-                                   entry.content.join(" ").toLowerCase().includes(searchTerm);
-                return titleMatch || contentMatch;
-            });
+            // Filter by crop
+            const cropMatch = !selectedCrop || (data.crop && data.crop === selectedCrop);
+            if (!cropMatch) return false;
+
+            // Filter by category
+            const categoryMatch = !selectedCategory || (data.category && data.category === selectedCategory);
+            if (!categoryMatch) return false;
+
+            // Filter by search term (if provided)
+            if (searchTerm) {
+                if (!data.entries || !Array.isArray(data.entries)) return false;
+                const searchContentMatch = data.entries.some(entry => {
+                    const titleMatch = entry.title && entry.title.toLowerCase().includes(searchTerm);
+                    const contentMatch = entry.content && Array.isArray(entry.content) &&
+                                       entry.content.join(" ").toLowerCase().includes(searchTerm);
+                    return titleMatch || contentMatch;
+                });
+                // Also check the main title (source derived)
+                let mainTitle = data.source ? data.source.replace(/\.docx$/i, '') : `Article ${data.id}`;
+                const mainTitleMatch = mainTitle.toLowerCase().includes(searchTerm);
+
+                return searchContentMatch || mainTitleMatch;
+            }
+
+            return true; // Pass if filters match and no search term
         });
+
+        // Update the counts display
+        const countsDiv = document.getElementById('article-counts');
+        countsDiv.textContent = `Showing ${filteredArticles.length} of ${allArticlesData.length} articles`;
 
         renderArticles(filteredArticles);
     }
@@ -239,9 +289,126 @@
       const results = await Promise.all(promises);
       allArticlesData = results.filter(data => data !== null); // Filter out failed loads
 
+      displayOverviewCounts(); // Calculate and display overview counts
       renderArticles(allArticlesData); // Initial render of all articles
+      // populateFilters(); // Removed
 
-      // Add event listener for search input after data is loaded
+      // Add event listeners after data is loaded
+      searchInput.addEventListener('input', () => {
+          clearTimeout(debounceTimer);
+          const currentSearchTerm = searchInput.value;
+          updateSuggestions(currentSearchTerm); // Update suggestions immediately
+          // Debounce the full article filtering
+          debounceTimer = setTimeout(() => {
+              filterArticles();
+          }, 300); // Adjust debounce time as needed
+      });
+
+      // cropFilter.addEventListener('change', filterArticles); // Removed
+      // categoryFilter.addEventListener('change', filterArticles); // Removed
+
+      // Add listener for clicks on overview counts
+      document.getElementById('overview-counts').addEventListener('click', (event) => {
+          if (event.target.tagName === 'SPAN' && event.target.dataset.filterType) {
+              const filterType = event.target.dataset.filterType;
+              const filterValue = event.target.dataset.filterValue;
+
+              // Toggle behavior: If clicking the active filter, clear it
+              if (filterType === 'category') {
+                  currentCategoryFilter = currentCategoryFilter === filterValue ? '' : filterValue;
+                  // Optionally reset the other filter or keep it
+                  // currentCropFilter = ''; // Uncomment to reset crop filter when category is clicked
+              } else if (filterType === 'crop') {
+                  currentCropFilter = currentCropFilter === filterValue ? '' : filterValue;
+                  // Optionally reset the other filter or keep it
+                  // currentCategoryFilter = ''; // Uncomment to reset category filter when crop is clicked
+              } else if (filterType === 'all') {
+                  currentCategoryFilter = '';
+                  currentCropFilter = '';
+              }
+              filterArticles(); // Re-filter articles based on the new selection
+              displayOverviewCounts(); // Update overview to highlight selection
+          }
+      });
+
+      // Hide suggestions when clicking outside
+      document.addEventListener('click', (event) => {
+          if (!searchInput.contains(event.target) && !suggestionsList.contains(event.target)) {
+              suggestionsList.style.display = 'none';
+          }
+      });
+    }
+
+    function displayOverviewCounts() {
+        const categoryCounts = {};
+        const cropCounts = {};
+
+        allArticlesData.forEach(data => {
+            if (data) {
+                if (data.category) {
+                    categoryCounts[data.category] = (categoryCounts[data.category] || 0) + 1;
+                }
+                if (data.crop) {
+                    cropCounts[data.crop] = (cropCounts[data.crop] || 0) + 1;
+                }
+            }
+        });
+
+        const overviewDiv = document.getElementById('overview-counts');
+        const allActive = !currentCategoryFilter && !currentCropFilter;
+        const allStyle = allActive ? 'font-weight: bold; background-color: #ffff99;' : 'cursor: pointer; text-decoration: underline; color: blue;';
+        let overviewHtml = `<strong>Overview:</strong> <span class="filter-link" data-filter-type="all" data-filter-value="" style="${allStyle} margin-right: 5px;">All (${allArticlesData.length})</span> | `;
+
+        // Categories
+        if (Object.keys(categoryCounts).length > 0) {
+            overviewHtml += 'Categories: ';
+            overviewHtml += Object.entries(categoryCounts).map(([key, value]) => {
+                const isActive = currentCategoryFilter === key;
+                const style = isActive ? 'font-weight: bold; background-color: #ffff99;' : 'cursor: pointer; text-decoration: underline; color: blue;';
+                return `<span class="filter-link" data-filter-type="category" data-filter-value="${key}" style="${style} margin-right: 5px;">${key} (${value})</span>`;
+            }).join(' ');
+        } else {
+            overviewHtml += 'No categories found.';
+        }
+
+        overviewHtml += ' | ';
+
+        // Crops
+        if (Object.keys(cropCounts).length > 0) {
+            overviewHtml += 'Crops: ';
+            overviewHtml += Object.entries(cropCounts).map(([key, value]) => {
+                const isActive = currentCropFilter === key;
+                const style = isActive ? 'font-weight: bold; background-color: #ffff99;' : 'cursor: pointer; text-decoration: underline; color: blue;';
+                return `<span class="filter-link" data-filter-type="crop" data-filter-value="${key}" style="${style} margin-right: 5px;">${key} (${value})</span>`;
+            }).join(' ');
+        } else {
+            overviewHtml += 'No crops found.';
+        }
+
+        overviewDiv.innerHTML = overviewHtml;
+    }
+
+    // function populateFilters() { ... } // Removed function
+
+    async function loadAllArticles() {
+      const articleCount = 43; // Assuming 43 articles based on previous context
+      container.innerHTML = "Loading articles...";
+      allArticlesData = []; // Reset data
+      const promises = [];
+
+      for (let i = 1; i <= articleCount; i++) {
+        promises.push(loadArticle(i));
+      }
+
+      // Wait for all fetch requests to complete
+      const results = await Promise.all(promises);
+      allArticlesData = results.filter(data => data !== null); // Filter out failed loads
+
+      displayOverviewCounts(); // Calculate and display overview counts
+      renderArticles(allArticlesData); // Initial render of all articles
+      // populateFilters(); // Removed
+
+      // Add event listeners after data is loaded
       searchInput.addEventListener('input', () => {
           clearTimeout(debounceTimer);
           const currentSearchTerm = searchInput.value;
