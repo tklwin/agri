@@ -59,17 +59,41 @@
         font-style: italic;
         margin-top: 20px;
     }
+    #suggestions-list {
+        border: 1px solid #ccc;
+        border-top: none;
+        max-height: 150px;
+        overflow-y: auto;
+        background-color: #fff;
+        position: absolute;
+        width: calc(100% - 42px); /* Match search input width */
+        z-index: 1000;
+        border-radius: 0 0 4px 4px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .suggestion-item {
+        padding: 8px 10px;
+        cursor: pointer;
+    }
+    .suggestion-item:hover {
+        background-color: #f0f0f0;
+    }
   </style>
 </head>
 <body>
   <h1>Myanmar Agricultural Pest & Disease Advisories</h1>
-  <input type="text" id="search-input" placeholder="Search articles by title or content...">
+  <div style="position: relative;">
+    <input type="text" id="search-input" placeholder="Search articles by title or content..." autocomplete="off">
+    <div id="suggestions-list"></div>
+  </div>
   <div id="container">Loading articles...</div>
 
   <script>
     const container = document.getElementById("container");
     const searchInput = document.getElementById("search-input");
+    const suggestionsList = document.getElementById("suggestions-list");
     let allArticlesData = []; // Store all loaded article data
+    let debounceTimer;
 
     async function loadArticle(index) {
       try {
@@ -120,31 +144,72 @@
                 </ul>
                 </details>
             `;
+            // Ensure details are closed by default if needed, or manage state
+            // const detailsElement = card.querySelector('details');
+            // detailsElement.removeAttribute('open');
             container.appendChild(card);
         });
     }
 
-    function filterArticles() {
-        const searchTerm = searchInput.value.toLowerCase().trim();
+    function updateSuggestions(searchTerm) {
+        suggestionsList.innerHTML = ''; // Clear previous suggestions
         if (!searchTerm) {
-            renderArticles(allArticlesData); // Show all if search is empty
+            suggestionsList.style.display = 'none';
+            return;
+        }
+
+        const lowerSearchTerm = searchTerm.toLowerCase();
+        const matchingTitles = allArticlesData
+            .map(data => {
+                if (!data || !data.entries || !Array.isArray(data.entries)) return null;
+                // Find the first title in the entries, default if none
+                const firstEntry = data.entries[0];
+                const title = firstEntry && firstEntry.title ? firstEntry.title : `Article ${data.id}`;
+                return { title: title, data: data }; // Return object with title and original data
+            })
+            .filter(item => item && item.title.toLowerCase().includes(lowerSearchTerm))
+            .slice(0, 10); // Limit suggestions
+
+        if (matchingTitles.length > 0) {
+            matchingTitles.forEach(item => {
+                const div = document.createElement('div');
+                div.textContent = item.title;
+                div.className = 'suggestion-item';
+                div.onclick = () => {
+                    searchInput.value = item.title; // Set input to clicked suggestion
+                    suggestionsList.innerHTML = ''; // Clear suggestions
+                    suggestionsList.style.display = 'none';
+                    filterArticles(); // Trigger search with the selected title
+                };
+                suggestionsList.appendChild(div);
+            });
+            suggestionsList.style.display = 'block';
+        } else {
+            suggestionsList.style.display = 'none';
+        }
+    }
+
+    function filterArticles() {
+        // suggestionsList.innerHTML = ''; // Clear suggestions when performing full search
+        // suggestionsList.style.display = 'none';
+        const searchTerm = searchInput.value.toLowerCase().trim();
+
+        // If search term is empty after clearing suggestions or initially, show all
+        if (!searchTerm) {
+            renderArticles(allArticlesData);
             return;
         }
 
         const filteredArticles = allArticlesData.filter(data => {
-            if (!data) return false;
+            if (!data || !data.entries || !Array.isArray(data.entries)) return false;
 
-            const title = data.entries && data.entries[0] && data.entries[0].title ? data.entries[0].title.toLowerCase() : (data.original_title || `Article ${data.id}`).toLowerCase();
-            let contentString = "";
-             if (data.entries && Array.isArray(data.entries)) {
-                data.entries.forEach(entry => {
-                    if (entry.content && Array.isArray(entry.content)) {
-                        contentString += entry.content.join(" ").toLowerCase();
-                    }
-                });
-            }
-
-            return title.includes(searchTerm) || contentString.includes(searchTerm);
+            // Check if the search term matches any title or content within the article's entries
+            return data.entries.some(entry => {
+                const titleMatch = entry.title && entry.title.toLowerCase().includes(searchTerm);
+                const contentMatch = entry.content && Array.isArray(entry.content) &&
+                                   entry.content.join(" ").toLowerCase().includes(searchTerm);
+                return titleMatch || contentMatch;
+            });
         });
 
         renderArticles(filteredArticles);
@@ -167,7 +232,23 @@
       renderArticles(allArticlesData); // Initial render of all articles
 
       // Add event listener for search input after data is loaded
-      searchInput.addEventListener('input', filterArticles);
+      searchInput.addEventListener('input', () => {
+          clearTimeout(debounceTimer);
+          const currentSearchTerm = searchInput.value;
+          // Update suggestions immediately
+          updateSuggestions(currentSearchTerm);
+          // Debounce the full article filtering
+          debounceTimer = setTimeout(() => {
+              filterArticles();
+          }, 300); // Adjust debounce time as needed
+      });
+
+      // Hide suggestions when clicking outside
+      document.addEventListener('click', (event) => {
+          if (!searchInput.contains(event.target) && !suggestionsList.contains(event.target)) {
+              suggestionsList.style.display = 'none';
+          }
+      });
     }
 
     loadAllArticles();
