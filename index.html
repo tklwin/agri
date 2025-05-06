@@ -126,22 +126,32 @@
             card.className = "card";
 
             // Use a more robust way to get title and content
-            const title = data.entries && data.entries[0] && data.entries[0].title ? data.entries[0].title : (data.original_title || `Article ${data.id}`);
-            let bullets = [];
+            const mainTitle = data.crop ? `${data.crop} - ${data.category}` : `Article ${data.id}`; // Use crop/category or ID as main title
+            let contentHtml = '';
+
             if (data.entries && Array.isArray(data.entries)) {
                 data.entries.forEach(entry => {
+                    // Add entry title if it exists
+                    if (entry.title) {
+                        contentHtml += `<h3>${entry.title}</h3>`;
+                    }
+                    // Add entry content bullets
                     if (entry.content && Array.isArray(entry.content)) {
-                        bullets = bullets.concat(entry.content);
+                        contentHtml += '<ul>';
+                        entry.content.forEach(item => {
+                            contentHtml += `<li>${item}</li>`;
+                        });
+                        contentHtml += '</ul>';
                     }
                 });
             }
 
             card.innerHTML = `
                 <details>
-                <summary>${title}</summary>
-                <ul>
-                    ${bullets.map(item => `<li>${item}</li>`).join("")}
-                </ul>
+                <summary>${mainTitle}</summary>
+                <div>
+                    ${contentHtml}
+                </div>
                 </details>
             `;
             // Ensure details are closed by default if needed, or manage state
